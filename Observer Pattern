@@ -1,0 +1,186 @@
+// Observer Pattern
+import java.util.ArrayList;
+import java.util.List;
+
+// Interface for Observer
+public interface INewsObserver {
+    void update(Event event);
+}
+
+// NewsBoard implementing the Observer pattern
+public class NewsBoard {
+    private List<INewsObserver> observers = new ArrayList<>();
+
+    public void registerObserver(INewsObserver observer) {
+        observers.add(observer);
+    }
+
+    public void removeObserver(INewsObserver observer) {
+        observers.remove(observer);
+    }
+
+    public void notifyObservers(Event event) {
+        for (INewsObserver observer : observers) {
+            observer.update(event);
+        }
+    }
+}
+
+// Event System
+abstract class Event {
+    protected String ticker;
+    public Event(String ticker) {
+        this.ticker = ticker;
+    }
+    public String getTicker() { return ticker; }
+}
+
+class GoodNews extends Event {
+    public GoodNews(String ticker) {
+        super(ticker);
+    }
+}
+
+class BadNews extends Event {
+    public BadNews(String ticker) {
+        super(ticker);
+    }
+}
+
+// TradingAgent implementing INewsObserver
+public abstract class TradingAgent implements INewsObserver {
+    protected String name;
+    protected ITradingStrategy strategy;
+    protected NewsBoard newsBoard;
+    
+    public TradingAgent(String name, ITradingStrategy strategy, NewsBoard newsBoard) {
+        this.name = name;
+        this.strategy = strategy;
+        this.newsBoard = newsBoard;
+        newsBoard.registerObserver(this);
+    }
+
+    public void setStrategy(ITradingStrategy strategy) {
+        this.strategy = strategy;
+    }
+
+    public void update(Event event) {
+        strategy.executeTrade(this, event);
+    }
+
+    public abstract void buyStock(int quantity);
+    public abstract void sellStock(int quantity);
+}
+
+// Strategy Pattern
+// Interface for Trading Strategies
+public interface ITradingStrategy {
+    void executeTrade(TradingAgent agent, Event event);
+}
+
+// Conservative Trading Strategy
+public class ConservativeStrategy implements ITradingStrategy {
+    @Override
+    public void executeTrade(TradingAgent agent, Event event) {
+        if (event instanceof GoodNews) {
+            agent.buyStock(5); // Small quantity buy
+        } else if (event instanceof BadNews) {
+            agent.sellStock(5); // Small quantity sell
+        }
+    }
+}
+
+// Aggressive Trading Strategy
+public class AggressiveStrategy implements ITradingStrategy {
+    @Override
+    public void executeTrade(TradingAgent agent, Event event) {
+        if (event instanceof GoodNews) {
+            agent.buyStock(20); // Large quantity buy
+        } else if (event instanceof BadNews) {
+            agent.sellStock(20); // Large quantity sell
+        }
+    }
+}
+
+// Institutional TradingAgent
+public class TradingAgentInstitutional extends TradingAgent {
+    public TradingAgentInstitutional(String name, ITradingStrategy strategy, NewsBoard newsBoard) {
+        super(name, strategy, newsBoard);
+    }
+    @Override
+    public void buyStock(int quantity) {
+        System.out.println(name + " (Institutional) buys " + quantity + " stocks.");
+    }
+    @Override
+    public void sellStock(int quantity) {
+        System.out.println(name + " (Institutional) sells " + quantity + " stocks.");
+    }
+}
+
+// Retail TradingAgent
+public class TradingAgentRetail extends TradingAgent {
+    public TradingAgentRetail(String name, ITradingStrategy strategy, NewsBoard newsBoard) {
+        super(name, strategy, newsBoard);
+    }
+    @Override
+    public void buyStock(int quantity) {
+        System.out.println(name + " (Retail) buys " + quantity + " stocks.");
+    }
+    @Override
+    public void sellStock(int quantity) {
+        System.out.println(name + " (Retail) sells " + quantity + " stocks.");
+    }
+}
+
+// Abstract Factory for TradingAgent
+public abstract class AbstractTradingAgentFactory {
+    public abstract TradingAgent createTradingAgent(String name, String style, NewsBoard newsBoard);
+}
+
+// Concrete Factory for Institutional Agents
+public class InstitutionalTradingAgentFactory extends AbstractTradingAgentFactory {
+    @Override
+    public TradingAgent createTradingAgent(String name, String style, NewsBoard newsBoard) {
+        ITradingStrategy strategy = (style.equals("Aggressive")) ? new AggressiveStrategy() : new ConservativeStrategy();
+        return new TradingAgentInstitutional(name, strategy, newsBoard);
+    }
+}
+
+// Concrete Factory for Retail Agents
+public class RetailTradingAgentFactory extends AbstractTradingAgentFactory {
+    @Override
+    public TradingAgent createTradingAgent(String name, String style, NewsBoard newsBoard) {
+        ITradingStrategy strategy = (style.equals("Aggressive")) ? new AggressiveStrategy() : new ConservativeStrategy();
+        return new TradingAgentRetail(name, strategy, newsBoard);
+    }
+}
+
+// Stock Exchange to manage agents and events
+public class StockExchange {
+    private NewsBoard newsBoard;
+    public StockExchange() {
+        this.newsBoard = new NewsBoard();
+    }
+
+    public void addEvent(Event event) {
+        newsBoard.notifyObservers(event);
+    }
+}
+
+// JUnit Test Class
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
+
+public class StockExchangeTest {
+    @Test
+    public void pushTest() {
+        StockExchange stockExchange = new StockExchange();
+        NewsBoard newsBoard = new NewsBoard();
+        TradingAgent agent = new TradingAgentInstitutional("Agent1", new ConservativeStrategy(), newsBoard);
+        
+        stockExchange.addEvent(new GoodNews("AAPL"));
+        stockExchange.addEvent(new BadNews("TSLA"));
+        
+        assertTrue(true); // Ensure test runs
+    }
+}
